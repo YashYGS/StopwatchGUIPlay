@@ -1,0 +1,47 @@
+import threading 
+import time
+
+global word
+
+word = 'hello'
+
+def function_to_call():  # replace me with your function
+    global word 
+    word = input("Enter your word: ")
+    time.sleep(1000)
+
+def timer_fn(timeout, event, delay=1):  # 5 seconds between reports
+    time_end = time.time() + timeout
+    
+    while not event.is_set():
+        
+        time_remaining = int(time_end - time.time())
+        
+        if time_remaining <= 0:
+            return
+        print(f"{int(time_remaining)}s remaining")
+        event.wait((min(delay, time_remaining)))  # wait for event
+
+timeout = int(input("minutes: ") or 0) * 60 + int(input("seconds: ") or 0)
+i = 5
+ 
+while i>0:
+    wordTemp = word 
+    E = threading.Event()  # Event to kill t2
+    # making t1 a daemon lets it not prevent shutdown
+    t1 = threading.Thread(target=function_to_call, daemon=True)
+    t2 = threading.Thread(target=timer_fn, args=(timeout, E), daemon=True)
+    
+    # begin both threads
+    t1.start()
+    t2.start()
+# wait for t1 to exit (but not t2)
+    t1.join(timeout=timeout)
+# t1 may join faster by ending, otherwise reach here after timeout
+    E.set()  # set the Event to quickly end t2 (timeout or t1 returned)
+    t2.join()  # not technically necessary, but cleans up t2
+    #print(word, wordTemp, "\n")
+    if word[0]!=wordTemp[-1]:
+        break
+    i -= 1
+# program quits and t1 is killed if it's still running
